@@ -9,11 +9,12 @@
 
 const char* JSON_MIME = "application/json";
 const char* TEXT_MIME = "text/plain";
+const int deviceId = 42;
 
-String getDeviceName = "http://aqua-iot.pro/api/v1/customers";
-String postSensorData = "http://aqua-iot.pro/api/v1/customers";
+String getDeviceData = "https://aqua-iot.pro/api/v1/sensordatas/?deviceId[eq]="+String(deviceId);
+String postSensorData = "https://aqua-iot.pro/api/v1/sensordatas";
 unsigned long lastTime = 0;
-unsigned long timerDelay = 5000;
+unsigned long timerDelay = 10000;
 
 /* DHT 11 */
 #define DHTpin 15
@@ -42,8 +43,12 @@ void loop() {
     if((millis() - lastTime) > timerDelay){
         if(WiFi.status() == WL_CONNECTED){
             HTTPClient http;
-            Serial.println("[+] Starting to get method!");
-            http.begin(getDeviceName.c_str());
+            Serial.println("\n[+] Starting get data method!");
+            http.begin(getDeviceData.c_str());
+            http.addHeader("Content-Type", "application/json");
+            http.addHeader("Connection", "keep-alive");
+            http.addHeader("Accept", "application/json");
+
             int httpResponseCode = http.GET();
             if(httpResponseCode > 0){
                 Serial.print("[+] HTTP Response code: ");
@@ -56,13 +61,9 @@ void loop() {
             }
             Serial.println("\n[+] Starting post method to send data");
             DynamicJsonDocument doc(1000);
-            doc["name"] = "no name";
-            doc["type"] = "B";
-            doc["email"] = "email1@gmail.com";
-            doc["address"] = "address";
-            doc["city"] = "Hanoi";
-            doc["state"] = "Ba Dinh";
-            doc["postalCode"] = "10000";
+            doc["deviceId"] = deviceId;
+            doc["humidity"] = dht.readHumidity();
+            doc["temperature"] = dht.readTemperature();
             String sensorData = "";
             serializeJson(doc, sensorData);
 
