@@ -9,14 +9,16 @@
 
 const char* JSON_MIME = "application/json";
 const char* TEXT_MIME = "text/plain";
-const int deviceId = 42;
+// Change here to send data
+const int deviceId = 22;
 
-String getDeviceData = "https://aqua-iot.pro/api/v1/sensordatas/?deviceId[eq]="+String(deviceId);
-String postSensorData = "https://aqua-iot.pro/api/v1/sensordatas";
+//String getDeviceData = "http://aqua-iot.xyz/api/v1/sensordatas/?deviceId[eq]="+deviceId;
+//String postSensorData = "http://192.168.0.5/iothub/api/v1/sensordatas";
+String sendDataWebsite = "https://aqua-iot.pro/api/v1/sensordatas";
 unsigned long lastTime = 0;
 unsigned long timerDelay = 10000;
 
-/* DHT 11 */
+/* Declare any sensor here */
 #define DHTpin 15
 #define DHTType DHT11
 DHT dht(DHTpin, DHTType);
@@ -43,31 +45,19 @@ void loop() {
     if((millis() - lastTime) > timerDelay){
         if(WiFi.status() == WL_CONNECTED){
             HTTPClient http;
-            Serial.println("\n[+] Starting get data method!");
-            http.begin(getDeviceData.c_str());
-            http.addHeader("Content-Type", "application/json");
-            http.addHeader("Connection", "keep-alive");
-            http.addHeader("Accept", "application/json");
-
-            int httpResponseCode = http.GET();
-            if(httpResponseCode > 0){
-                Serial.print("[+] HTTP Response code: ");
-                Serial.println(httpResponseCode);
-                String payload = http.getString();
-                Serial.println(payload);
-            } else {
-                Serial.printf("[+] Error code: ");
-                Serial.println(httpResponseCode);
-            }
             Serial.println("\n[+] Starting post method to send data");
             DynamicJsonDocument doc(1000);
-            doc["deviceId"] = deviceId;
+            String data_str = "";
             doc["humidity"] = dht.readHumidity();
             doc["temperature"] = dht.readTemperature();
+            serializeJson(doc, data_str);
+            
+            doc["deviceId"] = deviceId;
+            doc["data"] = data_str;
             String sensorData = "";
             serializeJson(doc, sensorData);
 
-            http.begin(postSensorData.c_str());
+            http.begin(sendDataWebsite.c_str());
             http.addHeader("Content-Type", "application/json");
             http.addHeader("Connection", "keep-alive");
             http.addHeader("Accept", "application/json");
