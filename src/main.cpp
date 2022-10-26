@@ -10,7 +10,7 @@
 const char* JSON_MIME = "application/json";
 const char* TEXT_MIME = "text/plain";
 // Change here to send data
-const int deviceId = 22;
+const int deviceId = 23;
 
 //String getDeviceData = "http://aqua-iot.xyz/api/v1/sensordatas/?deviceId[eq]="+deviceId;
 //String postSensorData = "http://192.168.0.5/iothub/api/v1/sensordatas";
@@ -51,7 +51,7 @@ void loop() {
             doc["humidity"] = dht.readHumidity();
             doc["temperature"] = dht.readTemperature();
             serializeJson(doc, data_str);
-            
+            doc.clear();
             doc["deviceId"] = deviceId;
             doc["data"] = data_str;
             String sensorData = "";
@@ -62,8 +62,9 @@ void loop() {
             http.addHeader("Connection", "keep-alive");
             http.addHeader("Accept", "application/json");
 
-
             int respCode = http.POST(sensorData);
+            Serial.print("[+] Sending: ");
+            Serial.println(sensorData);
             if(respCode > 0){
                 Serial.print("[+] Http Response code: ");
                 Serial.println(respCode);
