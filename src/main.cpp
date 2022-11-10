@@ -10,11 +10,11 @@
 const char* JSON_MIME = "application/json";
 const char* TEXT_MIME = "text/plain";
 // Change here to send data
-const int deviceId = 23;
+const int deviceId = 3;
 
-//String getDeviceData = "http://aqua-iot.xyz/api/v1/sensordatas/?deviceId[eq]="+deviceId;
-//String postSensorData = "http://192.168.0.5/iothub/api/v1/sensordatas";
-String sendDataWebsite = "https://aqua-iot.pro/api/v1/sensordatas";
+//String sendDataWebsite = "https://aqua-iot.pro/api/v1/sensordatas";
+String hostname = "http://aqua-iot.pro/api/v1/sensordatas";
+String twinurl = "http://aqua-iot.pro/api/v1/devices/"+String(deviceId);
 unsigned long lastTime = 0;
 unsigned long timerDelay = 10000;
 
@@ -24,8 +24,8 @@ unsigned long timerDelay = 10000;
 DHT dht(DHTpin, DHTType);
 
 /* Wifi connection */
-const char* ssid = "Lethuy_2.4Ghz";
-const char* password = "11336688";
+const char* ssid = "ThaoAn/2.4G";
+const char* password = "123456789";
 
 void setup(){
     Serial.begin(115200);
@@ -45,22 +45,25 @@ void loop() {
     if((millis() - lastTime) > timerDelay){
         if(WiFi.status() == WL_CONNECTED){
             HTTPClient http;
-            Serial.println("\n[+] Starting post method to send data");
+            //Gửi dữ liệu lên server
+            Serial.println("\n[+] Starting post method to send data:");
             DynamicJsonDocument doc(1000);
             String data_str = "";
+
             doc["humidity"] = dht.readHumidity();
             doc["temperature"] = dht.readTemperature();
             serializeJson(doc, data_str);
+    
             doc.clear();
             doc["deviceId"] = deviceId;
             doc["data"] = data_str;
             String sensorData = "";
             serializeJson(doc, sensorData);
 
-            http.begin(sendDataWebsite.c_str());
-            http.addHeader("Content-Type", "application/json");
+            http.begin(hostname.c_str());
+            http.addHeader("Content-Type", JSON_MIME);
             http.addHeader("Connection", "keep-alive");
-            http.addHeader("Accept", "application/json");
+            http.addHeader("Accept", JSON_MIME);
 
             int respCode = http.POST(sensorData);
             Serial.print("[+] Sending: ");
@@ -75,9 +78,39 @@ void loop() {
                 Serial.printf("[+] Error code: ");
                 Serial.println(respCode);
             }
+
+            //Nhận dữ liệu về
+            Serial.println("\n[+] Starting get method to receive desired twin:");
+            http.begin(twinurl.c_str());
+            // Send HTTP GET request
+            int httpResponseCode = http.GET();
+            if (httpResponseCode>0) {
+                Serial.print("[+] HTTP Response code: ");
+                Serial.println(httpResponseCode);
+                String payload = http.getString();
+                Serial.println("[+]" + payload);
+                deserializeJson(doc, payload);
+                
+                String desired = doc["data"]["desired"];
+                Serial.println("[+]" + desired);
+                doc.clear();
+                deserializeJson(doc, desired);
+                String hello = doc["hello"];
+                int ph = doc["desired_ph"];
+                int temp = doc["desired_temp"];
+                int humid = doc["desired_humid"];
+                Serial.println("\n[+] PH mong muon: " + String(ph) + 
+                ", Nhiet do mong muon: " + String(temp) + 
+                ", Do am mong muon: " + String(humid) +
+                ", Nguoi dung gui tin nhan: " + String(hello));
+            }
+            else {
+                Serial.print("[+] Error code: ");
+                Serial.println(httpResponseCode);
+            }
             http.end();
         } else {
-            Serial.println("Wifi disconnected!");
+            Serial.println("[+] Wifi disconnected!");
         }
         lastTime = millis();
     }
